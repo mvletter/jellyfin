@@ -1617,6 +1617,7 @@ public class DynamicHlsController : BaseJellyfinApiController
         var outputFileNameWithoutExtension = Path.GetFileNameWithoutExtension(outputPath);
         var outputPrefix = Path.Combine(directory, outputFileNameWithoutExtension);
         var outputExtension = EncodingHelper.GetSegmentFileExtension(state.Request.SegmentContainer, state.ActualOutputAudioCodec);
+        System.IO.File.AppendAllText("/tmp/debug-trace.log", $"[DEBUG-c9d3] GetVideoArguments: SegmentContainer='{state.Request.SegmentContainer}' OutputAudioCodec='{state.OutputAudioCodec}' ActualOutputAudioCodec='{state.ActualOutputAudioCodec}' outputExtension='{outputExtension}'\n");
         var outputTsArg = outputPrefix + "%d" + outputExtension;
 
         var segmentFormat = string.Empty;
