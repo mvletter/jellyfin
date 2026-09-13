@@ -205,14 +205,14 @@ public static class StreamingHelpers
         state.OutputAudioChannels = encodingHelper.GetNumAudioChannelsParam(state, state.AudioStream, state.OutputAudioCodec);
         if (EncodingHelper.LosslessAudioCodecs.Contains(outputAudioCodec))
         {
-            state.OutputAudioBitrate = state.AudioStream.BitRate ?? 0;
+            state.OutputAudioBitrate = state.AudioStream!.BitRate ?? 0;
         }
         else
         {
             state.OutputAudioBitrate = encodingHelper.GetAudioBitrateParam(streamingRequest.AudioBitRate, streamingRequest.AudioCodec, state.AudioStream, state.OutputAudioChannels) ?? 0;
         }
 
-        if (outputAudioCodec.StartsWith("pcm_", StringComparison.Ordinal))
+        if (outputAudioCodec!.StartsWith("pcm_", StringComparison.Ordinal))
         {
             containerInternal = ".pcm";
         }
