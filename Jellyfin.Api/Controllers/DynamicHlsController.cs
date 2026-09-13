@@ -465,6 +465,9 @@ public class DynamicHlsController : BaseJellyfinApiController
         [FromQuery] bool enableAudioVbrEncoding = true,
         [FromQuery] bool alwaysBurnInSubtitleWhenTranscoding = false)
     {
+#pragma warning disable CA1849
+        System.IO.File.AppendAllText("/tmp/debug-trace.log", $"[DEBUG-f1c7] RAW master.m3u8 request: {Request.QueryString}\n");
+#pragma warning restore CA1849
         var streamingRequest = new HlsVideoRequestDto
         {
             Id = itemId,
