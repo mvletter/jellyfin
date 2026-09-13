@@ -166,6 +166,16 @@ public static class StreamingHelpers
         // so it wins that selection and a real copy happens instead of a forced transcode.
         // Revert once the upstream app fix (jellyfin-androidtv#5817) ships and is installed
         // here, sending its own correct AudioCodec.
+        // Also force the container to fMP4 in that same case, even though this app explicitly
+        // requests "ts" (proven live: raw request carries "&SegmentContainer=ts&" - this is
+        // not an omitted value we're filling in, it's an explicit client choice we're
+        // deliberately overriding). MPEG-TS structurally accepts a copied TrueHD/DTS track
+        // (ffmpeg muxes and decodes it back fine - verified) but the real device here cannot
+        // bitstream-passthrough audio extracted from an HLS **TS** segment for these codecs
+        // (proven live: real TrueHD copy in a .ts segment produced "Dolby Atmos" on the
+        // receiver's display but no actual sound) - only fMP4 works for that on this hardware,
+        // which matches why the app's own DeviceProfile never offers TrueHD/DTS under its ts
+        // TranscodingProfile in the first place, only under its mp4 one.
         var homeTrustedPassthroughAudioCodecs = new[] { "truehd", "dts", "flac", "alac", "opus" };
         if (state.SupportedAudioCodecs is not null
             && state.AudioStream is not null
@@ -176,6 +186,7 @@ public static class StreamingHelpers
             state.SupportedAudioCodecs = new[] { state.AudioStream.Codec }.Concat(state.SupportedAudioCodecs).ToArray();
             streamingRequest.AudioCodec = state.SupportedAudioCodecs.FirstOrDefault(mediaEncoder.CanEncodeToAudioCodec)
                                            ?? state.SupportedAudioCodecs.FirstOrDefault();
+            streamingRequest.SegmentContainer = "mp4";
         }
 
         string? containerInternal = Path.GetExtension(state.RequestedUrl);
