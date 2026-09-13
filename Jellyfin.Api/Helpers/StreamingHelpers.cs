@@ -156,6 +156,28 @@ public static class StreamingHelpers
 
         encodingHelper.AttachMediaSourceInfo(state, encodingOptions, mediaSource, url);
 
+        // HOME HOTFIX (seville, not upstream): the Android TV app currently installed on this
+        // network's Chromecasts sends its own conservative AudioCodec list (the MPEG-TS-safe
+        // set from its DeviceProfile, e.g. "aac,ac3,eac3,mp3") even when the source is
+        // TrueHD/DTS, which both Chromecasts here are proven (tested live) to pass through
+        // fine. Since that declared list never contains the real source codec in that case,
+        // the FirstOrDefault(CanEncodeToAudioCodec) selection a few lines below always lands
+        // on "aac". Prepend the source codec when it's one we know these Chromecasts handle,
+        // so it wins that selection and a real copy happens instead of a forced transcode.
+        // Revert once the upstream app fix (jellyfin-androidtv#5817) ships and is installed
+        // here, sending its own correct AudioCodec.
+        var homeTrustedPassthroughAudioCodecs = new[] { "truehd", "dts", "flac", "alac", "opus" };
+        if (state.SupportedAudioCodecs is not null
+            && state.AudioStream is not null
+            && !string.IsNullOrWhiteSpace(state.AudioStream.Codec)
+            && !state.SupportedAudioCodecs.Contains(state.AudioStream.Codec, StringComparer.OrdinalIgnoreCase)
+            && homeTrustedPassthroughAudioCodecs.Contains(state.AudioStream.Codec, StringComparer.OrdinalIgnoreCase))
+        {
+            state.SupportedAudioCodecs = new[] { state.AudioStream.Codec }.Concat(state.SupportedAudioCodecs).ToArray();
+            streamingRequest.AudioCodec = state.SupportedAudioCodecs.FirstOrDefault(mediaEncoder.CanEncodeToAudioCodec)
+                                           ?? state.SupportedAudioCodecs.FirstOrDefault();
+        }
+
         string? containerInternal = Path.GetExtension(state.RequestedUrl);
 
         if (string.IsNullOrEmpty(containerInternal)
@@ -242,15 +264,17 @@ public static class StreamingHelpers
                 }
             }
 
-#pragma warning disable CA1849
-            System.IO.File.AppendAllText("/tmp/debug-trace.log", $"[DEBUG-b7e1] pre-check: AudioStream.Codec='{state.AudioStream?.Codec}' OutputAudioCodec='{state.OutputAudioCodec}' IsCopyCodec={EncodingHelper.IsCopyCodec(state.OutputAudioCodec)} OutputAudioBitrate={state.OutputAudioBitrate} SupportedAudioCodecs=[{string.Join(",", state.SupportedAudioCodecs ?? Array.Empty<string>())}]\n");
             if (state.AudioStream is not null && !EncodingHelper.IsCopyCodec(state.OutputAudioCodec) && string.Equals(state.AudioStream.Codec, state.OutputAudioCodec, StringComparison.OrdinalIgnoreCase) && state.OutputAudioBitrate.HasValue)
             {
-                System.IO.File.AppendAllText("/tmp/debug-trace.log", "[DEBUG-b7e1] OVERRIDE FIRED: rejecting lossless match, re-picking from SupportedAudioCodecs\n");
-                state.OutputAudioCodec = (state.SupportedAudioCodecs ?? Array.Empty<string>()).Where(c => !EncodingHelper.LosslessAudioCodecs.Contains(c)).FirstOrDefault(mediaEncoder.CanEncodeToAudioCodec);
-                System.IO.File.AppendAllText("/tmp/debug-trace.log", $"[DEBUG-b7e1] new OutputAudioCodec='{state.OutputAudioCodec}'\n");
+                // HOME HOTFIX (seville, not upstream): don't reject a lossless same-codec match
+                // for codecs the home-hotfix prepend above added on purpose (see
+                // homeTrustedPassthroughAudioCodecs) - that whole fix exists precisely to reach
+                // this exact match, so undoing it here would silently defeat it.
+                if (!homeTrustedPassthroughAudioCodecs.Contains(state.OutputAudioCodec, StringComparer.OrdinalIgnoreCase))
+                {
+                    state.OutputAudioCodec = (state.SupportedAudioCodecs ?? Array.Empty<string>()).Where(c => !EncodingHelper.LosslessAudioCodecs.Contains(c)).FirstOrDefault(mediaEncoder.CanEncodeToAudioCodec);
+                }
             }
-#pragma warning restore CA1849
         }
 
         var ext = string.IsNullOrWhiteSpace(state.OutputContainer)
