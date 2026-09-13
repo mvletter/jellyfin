@@ -1435,7 +1435,9 @@ public class DynamicHlsController : BaseJellyfinApiController
         // endpoints do, so the main playlist reports fMP4 (#EXT-X-VERSION/init segment) exactly
         // when the segments actually being served will be fMP4.
         var resolvedSegmentContainer = EncodingHelper.GetSegmentFileExtension(state.Request.SegmentContainer, state.ActualOutputAudioCodec).TrimStart('.');
+#pragma warning disable CA1849
         System.IO.File.AppendAllText("/tmp/debug-trace.log", $"[DEBUG-e2a8] MasterPlaylist: original state.Request.SegmentContainer='{state.Request.SegmentContainer}' OutputAudioCodec='{state.OutputAudioCodec}' ActualOutputAudioCodec='{state.ActualOutputAudioCodec}' resolvedSegmentContainer='{resolvedSegmentContainer}'\n");
+#pragma warning restore CA1849
 
         var request = new CreateMainPlaylistRequest(
             mediaSourceId is null ? null : Guid.Parse(mediaSourceId),
