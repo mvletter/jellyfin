@@ -673,6 +673,7 @@ namespace MediaBrowser.Controller.MediaEncoding
             }
 
             var inferredCodec = container.ToLowerInvariant();
+            Console.Error.WriteLine($"[DEBUG-a4f2] InferAudioCodec called with container='{container}'");
 
             // HOME HOTFIX (seville, not upstream): this container argument is actually the HLS
             // *segment* container for a video segment request (see DynamicHlsController), not an
