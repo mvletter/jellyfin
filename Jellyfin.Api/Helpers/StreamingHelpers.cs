@@ -242,9 +242,12 @@ public static class StreamingHelpers
                 }
             }
 
+            Console.Error.WriteLine($"[DEBUG-b7e1] pre-check: AudioStream.Codec='{state.AudioStream?.Codec}' OutputAudioCodec='{state.OutputAudioCodec}' IsCopyCodec={EncodingHelper.IsCopyCodec(state.OutputAudioCodec)} OutputAudioBitrate={state.OutputAudioBitrate} SupportedAudioCodecs=[{string.Join(",", state.SupportedAudioCodecs ?? Array.Empty<string>())}]");
             if (state.AudioStream is not null && !EncodingHelper.IsCopyCodec(state.OutputAudioCodec) && string.Equals(state.AudioStream.Codec, state.OutputAudioCodec, StringComparison.OrdinalIgnoreCase) && state.OutputAudioBitrate.HasValue)
             {
+                Console.Error.WriteLine("[DEBUG-b7e1] OVERRIDE FIRED: rejecting lossless match, re-picking from SupportedAudioCodecs");
                 state.OutputAudioCodec = state.SupportedAudioCodecs.Where(c => !EncodingHelper.LosslessAudioCodecs.Contains(c)).FirstOrDefault(mediaEncoder.CanEncodeToAudioCodec);
+                Console.Error.WriteLine($"[DEBUG-b7e1] new OutputAudioCodec='{state.OutputAudioCodec}'");
             }
         }
 
