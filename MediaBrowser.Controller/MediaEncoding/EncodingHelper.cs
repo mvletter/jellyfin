@@ -674,10 +674,18 @@ namespace MediaBrowser.Controller.MediaEncoding
 
             var inferredCodec = container.ToLowerInvariant();
 
+            // HOME HOTFIX (seville, not upstream): this container argument is actually the HLS
+            // *segment* container for a video segment request (see DynamicHlsController), not an
+            // audio file extension - "mp4" here tells us nothing about the audio format, but this
+            // inference still runs whenever the client doesn't send an explicit audioCodec, which
+            // ours doesn't yet (jellyfin-androidtv#5817, not installed on the real devices here).
+            // Since every real client on this network (both Chromecasts) passes through
+            // TrueHD/DTS/EAC3 fine, list those as acceptable instead of forcing AAC. Revert once
+            // #5817 ships and the app sends its own audioCodec.
             return inferredCodec switch
             {
                 "ogg" or "oga" or "ogv" or "webm" or "webma" => "opus",
-                "m4a" or "m4b" or "mp4" or "mov" or "mkv" or "mka" => "aac",
+                "m4a" or "m4b" or "mp4" or "mov" or "mkv" or "mka" => "truehd,dts,eac3,ac3,aac",
                 "ts" or "avi" or "flv" or "f4v" or "swf" => "mp3",
                 _ => inferredCodec
             };
